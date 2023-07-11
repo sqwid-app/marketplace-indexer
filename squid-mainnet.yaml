@@ -1,0 +1,26 @@
+manifestVersion: subsquid.io/v0.1
+name: sqwid-marketplace
+version: 1
+description: |-
+  Sqwid marketplace processor
+
+build:
+
+deploy:
+  addons:
+    postgres:
+  processor:
+    env:
+      NETWORK:
+        mainnet
+      NODE_RPC_WS:
+        wss://rpc.reefscan.info/ws
+      ARCHIVE_LOOKUP_NAME:
+        reef
+      START_BLOCK:
+        1
+      MARKET_CONTRACT_ADDRESS:
+        "0xB13Be9656B243600C86922708C20606f5EA89218"
+    cmd: [ "node", "lib/processor" ]
+  api:
+    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]

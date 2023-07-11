@@ -1,0 +1,71 @@
+type Item @entity {
+  id: ID!
+  nftContract: String! @index
+  tokenId: Int! @index
+  creator: String! @index
+  createdAt: BigInt!
+  positions: [Position!] @derivedFrom(field: "item")
+  sales: [Sale!] @derivedFrom(field: "item")
+}
+
+type Position @entity {
+  id: ID!
+  item: Item!
+  owner: String! @index
+  amount: Int!
+  price: BigInt!
+  marketFee: BigInt!
+  state: PositionState
+  updatedAt: BigInt!
+  bids: [Bid!] @derivedFrom(field: "position")
+  raffleEntries: [RaffleEntry!] @derivedFrom(field: "position")
+  loansFunded: [LoanFunded!] @derivedFrom(field: "position")
+}
+
+type Sale @entity {
+  id: ID!
+  item: Item!
+  seller: String! @index
+  buyer: String! @index
+  price: BigInt!
+  amount: Int!
+  timestamp: BigInt!
+}
+
+type Bid @entity {
+  id: ID!
+  position: Position!
+  bidder: String! @index
+  value: BigInt!
+  timestamp: BigInt!
+}
+
+type LoanFunded @entity {
+  id: ID!
+  position: Position!
+  funder: String! @index
+  timestamp: BigInt!
+}
+
+type RaffleEntry @entity {
+  id: ID!
+  position: Position!
+  user: String! @index
+  value: BigInt!
+  timestamp: BigInt!
+}
+
+type Balance @entity {
+  "The address of the account"
+  id: ID!
+  balance: BigInt!
+}
+
+enum PositionState {
+  Available,
+  RegularSale,
+  Auction,
+  Raffle,
+  Loan,
+  Deleted
+}
