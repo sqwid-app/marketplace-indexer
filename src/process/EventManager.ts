@@ -14,34 +14,36 @@ export class EventManager {
     loansFundedDataCache: LoanFundedData[] = [];
     raffleEntriesDataCache: RaffleEntryData[] = [];
     balancesCache: Map<string, Balance> = new Map();
+    topics: Set<string> = new Set();
 
     // Process an event and add it to the cache
     async process(eventRaw: EventRaw, blockHeader: SubstrateBlock): Promise<void> {
         // Map event-specific fields
         const eventData = SqwidMarketplace.abi.parseLog(eventRaw.args);
         const topic0 = eventRaw.args.topics[0] || "";
-        const timestamp = BigInt(blockHeader.timestamp);
+        this.topics.add(topic0);
+        
         switch (topic0) {
             case SqwidMarketplace.events.ItemCreated.topic:
-                this.processItemCreatedEvent(eventData, timestamp);
+                this.processItemCreatedEvent(eventData, blockHeader);
                 break;
             case SqwidMarketplace.events.PositionUpdate.topic:
-                this.processPositionUpdateEvent(eventData, timestamp);
+                this.processPositionUpdateEvent(eventData, blockHeader);
                 break;
             case SqwidMarketplace.events.PositionDelete.topic:
-                this.processPositionDeleteEvent(eventData, timestamp);
+                this.processPositionDeleteEvent(eventData, blockHeader);
                 break;
             case SqwidMarketplace.events.MarketItemSold.topic:
-                this.processMarketItemSoldEvent(eventData, eventRaw.id, timestamp);
+                this.processMarketItemSoldEvent(eventData, eventRaw.id, blockHeader);
                 break;
             case SqwidMarketplace.events.BidCreated.topic:
-                this.processBidCreatedEvent(eventData, eventRaw.id, timestamp);
+                this.processBidCreatedEvent(eventData, eventRaw.id, blockHeader);
                 break;
             case SqwidMarketplace.events.LoanFunded.topic:
-                this.processLoanFundedEvent(eventData, eventRaw.id, timestamp);
+                this.processLoanFundedEvent(eventData, eventRaw.id, blockHeader);
                 break;
             case SqwidMarketplace.events.RaffleEntered.topic:
-                this.processRaffleEnteredEvent(eventData, eventRaw.id, timestamp);
+                this.processRaffleEnteredEvent(eventData, eventRaw.id, blockHeader);
                 break;
             case SqwidMarketplace.events.BalanceUpdated.topic:
                 this.processBalanceUpdatedEvent(eventData);
@@ -87,20 +89,21 @@ export class EventManager {
 
         // Map and save sales
         const sales: Sale[] = await Promise.all(Array.from(this.salesDataCache.values())
-            .map(async (SaleData) => {
-                let item = this.itemsCache.find((item) => item.id === SaleData.itemId);
+            .map(async (saleData) => {
+                let item = this.itemsCache.find((item) => item.id === saleData.itemId);
                 if (!item) {
-                    item = await ctx.store.get(Item, SaleData.itemId);
-                    if (!item) throw new Error(`Item ${SaleData.itemId} not found`);
+                    item = await ctx.store.get(Item, saleData.itemId);
+                    if (!item) throw new Error(`Item ${saleData.itemId} not found`);
                 }
                 return new Sale({
-                    id: SaleData.id,
+                    id: saleData.id,
                     item: item,
-                    seller: SaleData.seller,
-                    buyer: SaleData.buyer,
-                    price: SaleData.price,
-                    amount: SaleData.amount,
-                    timestamp: SaleData.timestamp,
+                    seller: saleData.seller,
+                    buyer: saleData.buyer,
+                    price: saleData.price,
+                    amount: saleData.amount,
+                    timestamp: saleData.timestamp,
+                    blockHeight: saleData.blockHeight,
                 });
             }
         ));
@@ -120,6 +123,7 @@ export class EventManager {
                     bidder: bidData.bidder,
                     value: bidData.value,
                     timestamp: bidData.timestamp,
+                    blockHeight: bidData.blockHeight,
                 });
             }
         ));
@@ -138,6 +142,7 @@ export class EventManager {
                     position: position,
                     funder: loanFundedData.funder,
                     timestamp: loanFundedData.timestamp,
+                    blockHeight: loanFundedData.blockHeight,
                 });
             }
         ));
@@ -157,6 +162,7 @@ export class EventManager {
                     user: raffleEntryData.user,
                     value: raffleEntryData.value,
                     timestamp: raffleEntryData.timestamp,
+                    blockHeight: raffleEntryData.blockHeight,
                 });
             }
         ));
@@ -166,20 +172,20 @@ export class EventManager {
         await ctx.store.save(Array.from(this.balancesCache.values()));
     }
 
-    private processItemCreatedEvent(eventData: LogDescription, timestamp: bigint): void {
+    private processItemCreatedEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
         const [itemId, nftContract, tokenId, creator] = eventData.args;
         const item = new Item({
             id: this.formatId(itemId),
             nftContract: nftContract,
             tokenId: tokenId.toNumber(),
             creator: creator,
-            createdAt: timestamp,
+            createdAt: BigInt(blockHeader.timestamp),
         });
 
         this.itemsCache.push(item);
     }
 
-    private processPositionUpdateEvent(eventData: LogDescription, timestamp: bigint): void {
+    private processPositionUpdateEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
         const [positionId, itemId, owner, amount, price, marketFee, state] = eventData.args;
 
         const positionData: PositionData = {
@@ -190,40 +196,41 @@ export class EventManager {
             price: price.toString(),
             marketFee: marketFee.toString(),
             state: this.mapPositionState(state),
-            updatedAt: timestamp,
+            updatedAt: BigInt(blockHeader.timestamp),
         };
 
         this.positionsDataCache.set(positionData.id, positionData);
     }
 
-    private processPositionDeleteEvent(eventData: LogDescription, timestamp: bigint): void {
+    private processPositionDeleteEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
         const [positionId] = eventData.args;
 
         const deletedPositionData: DeletedPositionData = {
             id: this.formatId(positionId),
-            updatedAt: timestamp,
+            updatedAt: BigInt(blockHeader.timestamp),
         };
 
         this.deletedPositionsDataCache.push(deletedPositionData);
     }
 
-    private async processMarketItemSoldEvent(eventData: LogDescription, eventId: string, timestamp: bigint): Promise<void> {
+    private async processMarketItemSoldEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): Promise<void> {
         const [itemId, , , seller, buyer, price, amount] = eventData.args;
 
-        const SaleData: SaleData = {
+        const saleData: SaleData = {
             id: eventId,
             itemId: this.formatId(itemId),
             seller: seller,
             buyer: buyer,
             price: price.toString(),
             amount: amount.toNumber(),
-            timestamp: timestamp,
+            timestamp: BigInt(blockHeader.timestamp),
+            blockHeight: blockHeader.height,
         };
 
-        this.salesDataCache.push(SaleData);
+        this.salesDataCache.push(saleData);
     }
 
-    private processBidCreatedEvent(eventData: LogDescription, eventId: string, timestamp: bigint): void {
+    private processBidCreatedEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
         const [positionId, bidder, value] = eventData.args;
 
         const bidData: BidData = {
@@ -231,26 +238,28 @@ export class EventManager {
             positionId: this.formatId(positionId),
             bidder: bidder,
             value: value.toString(),
-            timestamp: timestamp,
+            timestamp: BigInt(blockHeader.timestamp),
+            blockHeight: blockHeader.height,
         };
 
         this.bidsDataCache.push(bidData);
     }
 
-    private processLoanFundedEvent(eventData: LogDescription, eventId: string, timestamp: bigint): void {
+    private processLoanFundedEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
         const [positionId, funder] = eventData.args;
 
         const loanFundedData: LoanFundedData = {
             id: eventId,
             positionId: this.formatId(positionId),
             funder: funder,
-            timestamp: timestamp,
+            timestamp: BigInt(blockHeader.timestamp),
+            blockHeight: blockHeader.height,
         };
 
         this.loansFundedDataCache.push(loanFundedData);
     }
 
-    private processRaffleEnteredEvent(eventData: LogDescription, eventId: string, timestamp: bigint): void {
+    private processRaffleEnteredEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
         const [positionId, addr, value] = eventData.args;
 
         const raffleEntryData: RaffleEntryData = {
@@ -258,7 +267,8 @@ export class EventManager {
             positionId: this.formatId(positionId),
             user: addr,
             value: value.toString(),
-            timestamp: timestamp,
+            timestamp: BigInt(blockHeader.timestamp),
+            blockHeight: blockHeader.height,
         };
 
         this.raffleEntriesDataCache.push(raffleEntryData);

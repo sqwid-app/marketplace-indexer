@@ -21,6 +21,18 @@ deploy:
         1
       MARKET_CONTRACT_ADDRESS:
         "0xCA864F5BBc03072F70620A359D8CD6f272665DC4"
+      PUSHER_ENABLED:
+        true
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        bsqwid-events-emitted-testnet
     cmd: [ "node", "lib/processor" ]
   api:
-    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+    cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]

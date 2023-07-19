@@ -21,4 +21,8 @@ export class LoanFunded {
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     timestamp!: bigint
+
+    @Index_()
+    @Column_("int4", {nullable: false})
+    blockHeight!: number
 }

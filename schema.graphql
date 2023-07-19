@@ -30,6 +30,7 @@ type Sale @entity {
   price: BigInt!
   amount: Int!
   timestamp: BigInt!
+  blockHeight: Int! @index
 }
 
 type Bid @entity {
@@ -38,6 +39,7 @@ type Bid @entity {
   bidder: String! @index
   value: BigInt!
   timestamp: BigInt!
+  blockHeight: Int! @index
 }
 
 type LoanFunded @entity {
@@ -45,6 +47,7 @@ type LoanFunded @entity {
   position: Position!
   funder: String! @index
   timestamp: BigInt!
+  blockHeight: Int! @index
 }
 
 type RaffleEntry @entity {
@@ -53,6 +56,7 @@ type RaffleEntry @entity {
   user: String! @index
   value: BigInt!
   timestamp: BigInt!
+  blockHeight: Int! @index
 }
 
 type Balance @entity {

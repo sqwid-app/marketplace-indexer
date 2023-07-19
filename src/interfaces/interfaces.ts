@@ -56,6 +56,7 @@ export interface SaleData {
     price: bigint;
     amount: number;
     timestamp: bigint;
+    blockHeight: number;
 }
 
 export interface BidData {
@@ -64,6 +65,7 @@ export interface BidData {
     bidder: string;
     value: bigint;
     timestamp: bigint;
+    blockHeight: number;
 }
 
 export interface LoanFundedData {
@@ -71,6 +73,7 @@ export interface LoanFundedData {
     positionId: string;
     funder: string;
     timestamp: bigint;
+    blockHeight: number;
 }
 
 export interface RaffleEntryData {
@@ -79,4 +82,5 @@ export interface RaffleEntryData {
     user: string;
     value: bigint;
     timestamp: bigint;
+    blockHeight: number;
 }
