@@ -36,3 +36,6 @@ deploy:
     cmd: [ "node", "lib/processor" ]
   api:
     cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
+  secrets:
+    - PUSHER_SECRET
+
