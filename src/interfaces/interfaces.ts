@@ -84,3 +84,9 @@ export interface RaffleEntryData {
     timestamp: bigint;
     blockHeight: number;
 }
+
+export interface AvailableBalanceDelta {
+    itemId: string;
+    owner: string;
+    delta: number;
+}

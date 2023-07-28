@@ -1,4 +1,4 @@
-import { BidData, DeletedPositionData, EventRaw, LoanFundedData, PositionData, RaffleEntryData, SaleData } from "../interfaces/interfaces";
+import { AvailableBalanceDelta, BidData, DeletedPositionData, EventRaw, LoanFundedData, PositionData, RaffleEntryData, SaleData } from "../interfaces/interfaces";
 import * as SqwidMarketplace from "../abi/SqwidMarketplace";
 import { Balance, Bid, Item, LoanFunded, Position, PositionState, RaffleEntry, Sale } from "../model";
 import { LogDescription } from "@ethersproject/abi";
@@ -8,6 +8,7 @@ import { SubstrateBlock } from "@subsquid/substrate-processor";
 export class EventManager {
     itemsCache: Item[] = [];
     positionsDataCache: Map<string, PositionData> = new Map();
+    availableBalancesDelta: AvailableBalanceDelta[] = [];
     deletedPositionsDataCache: DeletedPositionData[] = [];
     salesDataCache: SaleData[] = [];
     bidsDataCache: BidData[] = [];
@@ -77,6 +78,19 @@ export class EventManager {
             }
         ));
         await ctx.store.save(positions);
+
+        // Update available balances
+        const updatedBalancePositions = await Promise.all(this.availableBalancesDelta.map(async (availableBalanceDelta) => {
+            const position = await ctx.store.findOneBy(Position, {
+                owner: availableBalanceDelta.owner, 
+                item: { id: availableBalanceDelta.itemId },
+                state: PositionState.Available,
+            });
+            if (!position) throw new Error(`Position ${availableBalanceDelta.itemId} not found`);
+            position.amount += availableBalanceDelta.delta;
+            return position;
+        }));
+        await ctx.store.save(updatedBalancePositions);
 
         // Update deleted positions
         await Promise.all(this.deletedPositionsDataCache.map(async (deletedPosition) => {
@@ -200,6 +214,45 @@ export class EventManager {
         };
 
         this.positionsDataCache.set(positionData.id, positionData);
+
+        // Update available balance delta
+        const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
+            (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
+        );
+        if (positionData.state === PositionState.RegularSale 
+            || positionData.state === PositionState.Auction 
+            || positionData.state === PositionState.Raffle 
+            || positionData.state === PositionState.Loan
+        ) {
+            const availablePosition = Array.from(this.positionsDataCache.values()).find(
+                (positionData) => positionData.owner === owner 
+                    && positionData.state === PositionState.Available 
+                    && positionData.itemId === this.formatId(itemId)
+            );
+            if (availablePosition) {
+                // Update available position
+                this.positionsDataCache.get(availablePosition.id)!.amount -= amount.toNumber();
+                // Remove from available balances delta
+                if (indexOfAvailableBalancesDelta !== -1) {
+                    this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
+                }
+            } else {
+                if (indexOfAvailableBalancesDelta !== -1) {
+                    // Update available balance delta
+                    this.availableBalancesDelta[indexOfAvailableBalancesDelta].delta -= amount.toNumber();
+                } else {
+                    // Create available balance delta
+                    this.availableBalancesDelta.push({
+                        itemId: this.formatId(itemId),
+                        owner: owner,
+                        delta: -amount.toNumber(),
+                    });
+                }
+            }
+        } else if (positionData.state === PositionState.Available && indexOfAvailableBalancesDelta !== -1) {
+            // Remove from available balances delta
+            this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
+        }
     }
 
     private processPositionDeleteEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
