@@ -274,7 +274,7 @@ export class EventManager {
             itemId: this.formatId(itemId),
             seller: seller,
             buyer: buyer,
-            price: price.toString(),
+            price: price.div(amount).toString(),
             amount: amount.toNumber(),
             timestamp: BigInt(blockHeader.timestamp),
             blockHeight: blockHeader.height,

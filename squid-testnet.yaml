@@ -32,7 +32,7 @@ deploy:
       PUSHER_CHANNEL:
         reef-chain
       PUSHER_EVENT:
-        bsqwid-events-emitted-testnet
+        sqwid-events-emitted-testnet
     cmd: [ "node", "lib/processor" ]
   api:
     cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
