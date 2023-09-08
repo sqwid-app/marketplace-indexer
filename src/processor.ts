@@ -11,18 +11,26 @@ import Pusher from "pusher";
 
 const RPC_URL = process.env.NODE_RPC_WS;
 const AQUARIUM_ARCHIVE_NAME = process.env.ARCHIVE_LOOKUP_NAME as KnownArchives;
-const MARKET_CONTRACT_ADDRESS = process.env.MARKET_CONTRACT_ADDRESS as string;
+export const MARKET_CONTRACT_ADDRESS = process.env.MARKET_CONTRACT_ADDRESS as string;
+export const NFT_CONTRACT_ADDRESS = process.env.NFT_CONTRACT_ADDRESS as string;
 const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '1') || 1;
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
 const PUSHER_EVENT = process.env.PUSHER_EVENT;
-console.log(`\nRPC URL: ${RPC_URL}\nContract: ${MARKET_CONTRACT_ADDRESS}\nArchive: ${ARCHIVE}\nStart block: ${START_BLOCK}\n`);
+console.log(`\nRPC URL: ${RPC_URL}
+  \nMarketplace contract: ${MARKET_CONTRACT_ADDRESS}
+  \nNFT contract: ${NFT_CONTRACT_ADDRESS}
+  \nArchive: ${ARCHIVE}
+  \nStart block: ${START_BLOCK}\n`);
 
 const database = new TypeormDatabase();
 const processor = new SubstrateBatchProcessor()
   .setBlockRange({ from: START_BLOCK })
   .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
   .addEvmLog(MARKET_CONTRACT_ADDRESS, {
+    data: { event: { args: true, extrinsic: true } }
+  })
+  .addEvmLog(NFT_CONTRACT_ADDRESS, {
     data: { event: { args: true, extrinsic: true } }
   });
 
