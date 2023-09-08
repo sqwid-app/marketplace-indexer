@@ -17,11 +17,13 @@ const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '1') || 1;
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
 const PUSHER_EVENT = process.env.PUSHER_EVENT;
-console.log(`\nRPC URL: ${RPC_URL}
-  \nMarketplace contract: ${MARKET_CONTRACT_ADDRESS}
-  \nNFT contract: ${NFT_CONTRACT_ADDRESS}
-  \nArchive: ${ARCHIVE}
-  \nStart block: ${START_BLOCK}\n`);
+console.log(`
+  RPC URL: ${RPC_URL}
+  Marketplace contract: ${MARKET_CONTRACT_ADDRESS}
+  NFT contract: ${NFT_CONTRACT_ADDRESS}
+  Archive: ${ARCHIVE}
+  Start block: ${START_BLOCK}
+`);
 
 const database = new TypeormDatabase();
 const processor = new SubstrateBatchProcessor()
@@ -43,9 +45,9 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
     cluster: process.env.PUSHER_CLUSTER || "eu",
     useTLS: true
   });
-  console.log('Pusher enabled\n');
+  console.log('  Pusher enabled\n');
 } else {
-  console.log('Pusher disabled\n');
+  console.log('  Pusher disabled\n');
 }
 
 export type Item = BatchProcessorItem<typeof processor>;

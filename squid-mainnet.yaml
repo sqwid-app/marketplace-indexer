@@ -24,7 +24,7 @@ deploy:
       NFT_CONTRACT_ADDRESS:
         "0x0601202b75C96A61CDb9A99D4e2285E43c6e60e4"
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
