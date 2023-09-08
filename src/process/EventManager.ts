@@ -1,9 +1,11 @@
 import { AvailableBalanceDelta, BidData, DeletedPositionData, EventRaw, LoanFundedData, PositionData, RaffleEntryData, SaleData } from "../interfaces/interfaces";
 import * as SqwidMarketplace from "../abi/SqwidMarketplace";
+import * as SqwidERC1155 from "../abi/SqwidERC1155";
 import { Balance, Bid, Item, LoanFunded, Position, PositionState, RaffleEntry, Sale } from "../model";
 import { LogDescription } from "@ethersproject/abi";
-import { ctx } from "../processor";
+import { MARKET_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS, ctx } from "../processor";
 import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { ethers } from "ethers";
 
 export class EventManager {
     itemsCache: Item[] = [];
@@ -20,7 +22,9 @@ export class EventManager {
     // Process an event and add it to the cache
     async process(eventRaw: EventRaw, blockHeader: SubstrateBlock): Promise<void> {
         // Map event-specific fields
-        const eventData = SqwidMarketplace.abi.parseLog(eventRaw.args);
+        const eventData = eventRaw.args.address === MARKET_CONTRACT_ADDRESS.toLowerCase()
+            ? SqwidMarketplace.abi.parseLog(eventRaw.args)
+            : SqwidERC1155.abi.parseLog(eventRaw.args);
         const topic0 = eventRaw.args.topics[0] || "";
         this.topics.add(topic0);
         
@@ -48,6 +52,12 @@ export class EventManager {
                 break;
             case SqwidMarketplace.events.BalanceUpdated.topic:
                 this.processBalanceUpdatedEvent(eventData);
+                break;
+            case SqwidERC1155.events.TransferSingle.topic:
+                await this.processTransferSingleEvent(eventData);
+                break;
+            case SqwidERC1155.events.TransferBatch.topic:
+                await this.processTransferBatchEvent(eventData);
                 break;
         }
     }
@@ -80,17 +90,17 @@ export class EventManager {
         await ctx.store.save(positions);
 
         // Update available balances
-        const updatedBalancePositions = await Promise.all(this.availableBalancesDelta.map(async (availableBalanceDelta) => {
+        const updatedAvailablePositions = await Promise.all(this.availableBalancesDelta.map(async (availableBalanceDelta) => {
             const position = await ctx.store.findOneBy(Position, {
                 owner: availableBalanceDelta.owner, 
                 item: { id: availableBalanceDelta.itemId },
                 state: PositionState.Available,
             });
-            if (!position) throw new Error(`Position ${availableBalanceDelta.itemId} not found`);
+            if (!position) return null;
             position.amount += availableBalanceDelta.delta;
             return position;
         }));
-        await ctx.store.save(updatedBalancePositions);
+        await ctx.store.save(updatedAvailablePositions.filter((position) => position !== null) as Position[]);
 
         // Update deleted positions
         await Promise.all(this.deletedPositionsDataCache.map(async (deletedPosition) => {
@@ -216,42 +226,20 @@ export class EventManager {
         this.positionsDataCache.set(positionData.id, positionData);
 
         // Update available balance delta
-        const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
-            (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
-        );
         if (positionData.state === PositionState.RegularSale 
             || positionData.state === PositionState.Auction 
             || positionData.state === PositionState.Raffle 
             || positionData.state === PositionState.Loan
         ) {
-            const availablePosition = Array.from(this.positionsDataCache.values()).find(
-                (positionData) => positionData.owner === owner 
-                    && positionData.state === PositionState.Available 
-                    && positionData.itemId === this.formatId(itemId)
+            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -amount.toNumber());
+        } else if (positionData.state === PositionState.Available) {
+            const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
+                (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
             );
-            if (availablePosition) {
-                // Update available position
-                this.positionsDataCache.get(availablePosition.id)!.amount -= amount.toNumber();
+            if (indexOfAvailableBalancesDelta !== -1) {
                 // Remove from available balances delta
-                if (indexOfAvailableBalancesDelta !== -1) {
-                    this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
-                }
-            } else {
-                if (indexOfAvailableBalancesDelta !== -1) {
-                    // Update available balance delta
-                    this.availableBalancesDelta[indexOfAvailableBalancesDelta].delta -= amount.toNumber();
-                } else {
-                    // Create available balance delta
-                    this.availableBalancesDelta.push({
-                        itemId: this.formatId(itemId),
-                        owner: owner,
-                        delta: -amount.toNumber(),
-                    });
-                }
+                this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
             }
-        } else if (positionData.state === PositionState.Available && indexOfAvailableBalancesDelta !== -1) {
-            // Remove from available balances delta
-            this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
         }
     }
 
@@ -336,6 +324,64 @@ export class EventManager {
         });
 
         this.balancesCache.set(balance.id, balance);
+    }
+
+    private async processTransferSingleEvent(eventData: LogDescription): Promise<void> {
+        const [operator, from, to, id, value] = eventData.args;
+        if (operator === MARKET_CONTRACT_ADDRESS 
+            || to === MARKET_CONTRACT_ADDRESS
+            || from === ethers.constants.AddressZero) return;
+
+        // Find item in cache
+        let item = this.itemsCache.find((item) => item.tokenId === Number(id));
+        if (!item) {
+            // Find item in database
+            item = await ctx.store.findOneBy(Item, {
+                nftContract: NFT_CONTRACT_ADDRESS,
+                tokenId: Number(id),
+            });
+            if (!item) return; // NFT is not in the marketplace
+        }
+
+        this.addAvailableBalanceDelta(from, item.id, -Number(value));
+        if (to !== ethers.constants.AddressZero) {
+            this.addAvailableBalanceDelta(to, item.id, Number(value));
+        }
+    }
+
+    private async processTransferBatchEvent(eventData: LogDescription): Promise<void> {
+
+    }
+
+    private addAvailableBalanceDelta(owner: string, itemId: string, amount: number): void {
+        const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
+            (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
+        );
+        const availablePosition = Array.from(this.positionsDataCache.values()).find(
+            (positionData) => positionData.owner === owner 
+                && positionData.state === PositionState.Available 
+                && positionData.itemId === itemId
+        );
+        if (availablePosition) { // Available position is in cache
+            // Update available position balance
+            this.positionsDataCache.get(availablePosition.id)!.amount += amount;
+            // Remove from available balances delta
+            if (indexOfAvailableBalancesDelta !== -1) {
+                this.availableBalancesDelta.splice(indexOfAvailableBalancesDelta, 1);
+            }
+        } else { // Available position is not in cache
+            if (indexOfAvailableBalancesDelta !== -1) {
+                // Update available balance delta
+                this.availableBalancesDelta[indexOfAvailableBalancesDelta].delta += amount;
+            } else {
+                // Create available balance delta
+                this.availableBalancesDelta.push({
+                    itemId: this.formatId(itemId),
+                    owner: owner,
+                    delta: amount
+                });
+            }
+        }
     }
 
     private mapPositionState(state: any): PositionState {
