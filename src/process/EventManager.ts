@@ -1,11 +1,10 @@
-import { AvailableBalanceDelta, BidData, DeletedPositionData, EventRaw, LoanFundedData, PositionData, RaffleEntryData, SaleData } from "../interfaces/interfaces";
+import { LogDescription, ethers } from "ethers";
+import { Event, BlockHeader } from "@subsquid/substrate-processor";
+import { AvailableBalanceDelta, BidData, DeletedPositionData, LoanFundedData, PositionData, RaffleEntryData, SaleData } from "../interfaces/interfaces";
+import { Balance, Bid, Item, LoanFunded, Position, PositionState, RaffleEntry, Sale } from "../model";
+import { MARKET_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS, ctx, Fields } from "../processor";
 import * as SqwidMarketplace from "../abi/SqwidMarketplace";
 import * as SqwidERC1155 from "../abi/SqwidERC1155";
-import { Balance, Bid, Item, LoanFunded, Position, PositionState, RaffleEntry, Sale } from "../model";
-import { LogDescription } from "@ethersproject/abi";
-import { MARKET_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS, ctx } from "../processor";
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { ethers } from "ethers";
 
 export class EventManager {
     itemsCache: Item[] = [];
@@ -20,35 +19,36 @@ export class EventManager {
     topics: Set<string> = new Set();
 
     // Process an event and add it to the cache
-    async process(eventRaw: EventRaw, blockHeader: SubstrateBlock): Promise<void> {
+    async process(event: Event<Fields>): Promise<void> {
         // Map event-specific fields
-        const eventData = eventRaw.args.address === MARKET_CONTRACT_ADDRESS.toLowerCase()
-            ? SqwidMarketplace.abi.parseLog(eventRaw.args)
-            : SqwidERC1155.abi.parseLog(eventRaw.args);
-        const topic0 = eventRaw.args.topics[0] || "";
+        const eventData = event.args.address === MARKET_CONTRACT_ADDRESS.toLowerCase()
+            ? SqwidMarketplace.abi.parseLog(event.args)
+            : SqwidERC1155.abi.parseLog(event.args);
+        if (!eventData) throw new Error(`Event data not found for event ${event.args.topics[0]}`)
+        const topic0 = event.args.topics[0] || "";
         this.topics.add(topic0);
         
         switch (topic0) {
             case SqwidMarketplace.events.ItemCreated.topic:
-                this.processItemCreatedEvent(eventData, blockHeader);
+                this.processItemCreatedEvent(eventData, event.block);
                 break;
             case SqwidMarketplace.events.PositionUpdate.topic:
-                this.processPositionUpdateEvent(eventData, blockHeader);
+                this.processPositionUpdateEvent(eventData, event.block);
                 break;
             case SqwidMarketplace.events.PositionDelete.topic:
-                this.processPositionDeleteEvent(eventData, blockHeader);
+                this.processPositionDeleteEvent(eventData, event.block);
                 break;
             case SqwidMarketplace.events.MarketItemSold.topic:
-                this.processMarketItemSoldEvent(eventData, eventRaw.id, blockHeader);
+                this.processMarketItemSoldEvent(eventData, event.id, event.block);
                 break;
             case SqwidMarketplace.events.BidCreated.topic:
-                this.processBidCreatedEvent(eventData, eventRaw.id, blockHeader);
+                this.processBidCreatedEvent(eventData, event.id, event.block);
                 break;
             case SqwidMarketplace.events.LoanFunded.topic:
-                this.processLoanFundedEvent(eventData, eventRaw.id, blockHeader);
+                this.processLoanFundedEvent(eventData, event.id, event.block);
                 break;
             case SqwidMarketplace.events.RaffleEntered.topic:
-                this.processRaffleEnteredEvent(eventData, eventRaw.id, blockHeader);
+                this.processRaffleEnteredEvent(eventData, event.id, event.block);
                 break;
             case SqwidMarketplace.events.BalanceUpdated.topic:
                 this.processBalanceUpdatedEvent(eventData);
@@ -196,20 +196,20 @@ export class EventManager {
         await ctx.store.save(Array.from(this.balancesCache.values()));
     }
 
-    private processItemCreatedEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
+    private processItemCreatedEvent(eventData: LogDescription, blockHeader: BlockHeader<Fields>): void {
         const [itemId, nftContract, tokenId, creator] = eventData.args;
         const item = new Item({
             id: this.formatId(itemId),
             nftContract: nftContract,
             tokenId: tokenId.toNumber(),
             creator: creator,
-            createdAt: BigInt(blockHeader.timestamp),
+            createdAt: BigInt(blockHeader.timestamp!),
         });
 
         this.itemsCache.push(item);
     }
 
-    private processPositionUpdateEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
+    private processPositionUpdateEvent(eventData: LogDescription, blockHeader: BlockHeader<Fields>): void {
         const [positionId, itemId, owner, amount, price, marketFee, state] = eventData.args;
 
         const positionData: PositionData = {
@@ -220,7 +220,7 @@ export class EventManager {
             price: price.toString(),
             marketFee: marketFee.toString(),
             state: this.mapPositionState(state),
-            updatedAt: BigInt(blockHeader.timestamp),
+            updatedAt: BigInt(blockHeader.timestamp!),
         };
 
         this.positionsDataCache.set(positionData.id, positionData);
@@ -243,18 +243,18 @@ export class EventManager {
         }
     }
 
-    private processPositionDeleteEvent(eventData: LogDescription, blockHeader: SubstrateBlock): void {
+    private processPositionDeleteEvent(eventData: LogDescription, blockHeader: BlockHeader<Fields>): void {
         const [positionId] = eventData.args;
 
         const deletedPositionData: DeletedPositionData = {
             id: this.formatId(positionId),
-            updatedAt: BigInt(blockHeader.timestamp),
+            updatedAt: BigInt(blockHeader.timestamp!),
         };
 
         this.deletedPositionsDataCache.push(deletedPositionData);
     }
 
-    private async processMarketItemSoldEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): Promise<void> {
+    private async processMarketItemSoldEvent(eventData: LogDescription, eventId: string, blockHeader: BlockHeader<Fields>): Promise<void> {
         const [itemId, , , seller, buyer, price, amount] = eventData.args;
 
         const saleData: SaleData = {
@@ -264,14 +264,14 @@ export class EventManager {
             buyer: buyer,
             price: price.div(amount).toString(),
             amount: amount.toNumber(),
-            timestamp: BigInt(blockHeader.timestamp),
+            timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
 
         this.salesDataCache.push(saleData);
     }
 
-    private processBidCreatedEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
+    private processBidCreatedEvent(eventData: LogDescription, eventId: string, blockHeader: BlockHeader<Fields>): void {
         const [positionId, bidder, value] = eventData.args;
 
         const bidData: BidData = {
@@ -279,28 +279,28 @@ export class EventManager {
             positionId: this.formatId(positionId),
             bidder: bidder,
             value: value.toString(),
-            timestamp: BigInt(blockHeader.timestamp),
+            timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
 
         this.bidsDataCache.push(bidData);
     }
 
-    private processLoanFundedEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
+    private processLoanFundedEvent(eventData: LogDescription, eventId: string, blockHeader: BlockHeader<Fields>): void {
         const [positionId, funder] = eventData.args;
 
         const loanFundedData: LoanFundedData = {
             id: eventId,
             positionId: this.formatId(positionId),
             funder: funder,
-            timestamp: BigInt(blockHeader.timestamp),
+            timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
 
         this.loansFundedDataCache.push(loanFundedData);
     }
 
-    private processRaffleEnteredEvent(eventData: LogDescription, eventId: string, blockHeader: SubstrateBlock): void {
+    private processRaffleEnteredEvent(eventData: LogDescription, eventId: string, blockHeader: BlockHeader<Fields>): void {
         const [positionId, addr, value] = eventData.args;
 
         const raffleEntryData: RaffleEntryData = {
@@ -308,7 +308,7 @@ export class EventManager {
             positionId: this.formatId(positionId),
             user: addr,
             value: value.toString(),
-            timestamp: BigInt(blockHeader.timestamp),
+            timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
 
@@ -330,7 +330,7 @@ export class EventManager {
         const [operator, from, to, id, value] = eventData.args;
         if (operator === MARKET_CONTRACT_ADDRESS 
             || to === MARKET_CONTRACT_ADDRESS
-            || from === ethers.constants.AddressZero) return;
+            || from === ethers.ZeroAddress) return;
 
         // Find item in cache
         let item = this.itemsCache.find((item) => item.tokenId === Number(id));
@@ -344,13 +344,34 @@ export class EventManager {
         }
 
         this.addAvailableBalanceDelta(from, item.id, -Number(value));
-        if (to !== ethers.constants.AddressZero) {
+        if (to !== ethers.ZeroAddress) {
             this.addAvailableBalanceDelta(to, item.id, Number(value));
         }
     }
 
     private async processTransferBatchEvent(eventData: LogDescription): Promise<void> {
+        const [operator, from, to, ids, values] = eventData.args;
+        if (operator === MARKET_CONTRACT_ADDRESS 
+            || to === MARKET_CONTRACT_ADDRESS
+            || from === ethers.ZeroAddress) return;
 
+        for (const [index, tokenId] of ids) {
+            // Find item in cache
+            let item = this.itemsCache.find((item) => item.tokenId === Number(tokenId));
+            if (!item) {
+                // Find item in database
+                item = await ctx.store.findOneBy(Item, {
+                    nftContract: NFT_CONTRACT_ADDRESS,
+                    tokenId: Number(tokenId),
+                });
+                if (!item) continue; // NFT is not in the marketplace
+            }
+    
+            this.addAvailableBalanceDelta(from, item.id, -Number(values[index]));
+            if (to !== ethers.ZeroAddress) {
+                this.addAvailableBalanceDelta(to, item.id, Number(values[index]));
+            }
+        }
     }
 
     private addAvailableBalanceDelta(owner: string, itemId: string, amount: number): void {
