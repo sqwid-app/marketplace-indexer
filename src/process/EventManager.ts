@@ -201,7 +201,7 @@ export class EventManager {
         const item = new Item({
             id: this.formatId(itemId),
             nftContract: nftContract,
-            tokenId: tokenId.toNumber(),
+            tokenId: tokenId,
             creator: creator,
             createdAt: BigInt(blockHeader.timestamp!),
         });
@@ -216,9 +216,9 @@ export class EventManager {
             id: this.formatId(positionId),
             itemId: this.formatId(itemId),
             owner: owner,
-            amount: amount.toNumber(),
-            price: price.toString(),
-            marketFee: marketFee.toString(),
+            amount: amount,
+            price: price,
+            marketFee: marketFee,
             state: this.mapPositionState(state),
             updatedAt: BigInt(blockHeader.timestamp!),
         };
@@ -231,7 +231,7 @@ export class EventManager {
             || positionData.state === PositionState.Raffle 
             || positionData.state === PositionState.Loan
         ) {
-            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -amount.toNumber());
+            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -amount);
         } else if (positionData.state === PositionState.Available) {
             const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
                 (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
@@ -262,8 +262,8 @@ export class EventManager {
             itemId: this.formatId(itemId),
             seller: seller,
             buyer: buyer,
-            price: price.div(amount).toString(),
-            amount: amount.toNumber(),
+            price: BigInt(price) / amount,
+            amount: amount,
             timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
@@ -278,7 +278,7 @@ export class EventManager {
             id: eventId,
             positionId: this.formatId(positionId),
             bidder: bidder,
-            value: value.toString(),
+            value: value,
             timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
@@ -307,7 +307,7 @@ export class EventManager {
             id: eventId,
             positionId: this.formatId(positionId),
             user: addr,
-            value: value.toString(),
+            value: value,
             timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
@@ -320,7 +320,7 @@ export class EventManager {
 
         const balance = new Balance({
             id: addr,
-            balance: value.toString(),
+            balance: value,
         });
 
         this.balancesCache.set(balance.id, balance);
