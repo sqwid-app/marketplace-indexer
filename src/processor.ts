@@ -2,6 +2,7 @@ import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
 import { DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
 import { EventManager } from "./process/EventManager";
+import { FirebaseDB } from "./firebase/firebase";
 
 // TODO: Remove Pusher
 import Pusher from "pusher";
@@ -21,8 +22,6 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
   console.log('  Pusher disabled\n');
 }
 
-// TODO: Add FirebaseDB
-
 const network = process.env.NETWORK;
 if (!network) throw new Error('Network not set in environment.')
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
@@ -31,6 +30,7 @@ const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '1') || 1;
 export const MARKET_CONTRACT_ADDRESS = process.env.MARKET_CONTRACT_ADDRESS as string;
 export const NFT_CONTRACT_ADDRESS = process.env.NFT_CONTRACT_ADDRESS as string;
+const firebaseDB = process.env.NOTIFY_EVENTS_EMITTED === 'true' ? new FirebaseDB() : null;
 
 console.log(`
   Network: ${network}
@@ -39,37 +39,20 @@ console.log(`
   NFT contract: ${NFT_CONTRACT_ADDRESS}
   Archive: ${ARCHIVE}
   Start block: ${START_BLOCK}
+  Firebase: ${firebaseDB ? 'enabled' : 'disabled'}
 `);
 
 const database = new TypeormDatabase();
-const fields = { // TODO check if all fields are needed
-  event: {
-    phase: true,
-  },
-  extrinsic: {
-    signature: true,
-    success: true,
-    error: true,
-    hash: true,
-    version: true,
-  },
-  call: {
-    name: true,
-    args: true,
-  },
-  block: {
-    timestamp: true,
-    stateRoot: true,
-    extrinsicsRoot: true,
-    validator: true,
-  }
+const fields = {
+  event: {},
+  block: {timestamp: true}
 };
 export type Fields = typeof fields;
 
 const processor = new SubstrateBatchProcessor()
   .setBlockRange({ from: START_BLOCK })
   .setDataSource({ chain: { url: RPC_URL!, rateLimit: 10 }, archive: ARCHIVE })
-  .addEvmLog({ address: [MARKET_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS], extrinsic: true })
+  .addEvmLog({ address: [MARKET_CONTRACT_ADDRESS, NFT_CONTRACT_ADDRESS] })
   .setFields(fields);
 
 export let ctx: DataHandlerContext<Store, Fields>;
@@ -101,6 +84,13 @@ processor.run(database, async (ctx_) => {
   ctx.log.info(`Saving blocks from ${firstBlock} to ${lastBlock}`);
   await eventManager.save();
 
+  if (firebaseDB) {
+    firebaseDB.notifyEvent(
+      ctx.blocks[ctx.blocks.length - 1].header.height,
+      Array.from(eventManager.topics)
+    );
+  }
+
   // TODO remove Pusher
   if (pusher) {
     pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
@@ -108,5 +98,4 @@ processor.run(database, async (ctx_) => {
       events: Array.from(eventManager.topics)
     });
   }
-  
 });
