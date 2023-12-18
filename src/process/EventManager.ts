@@ -216,7 +216,7 @@ export class EventManager {
             id: this.formatId(positionId),
             itemId: this.formatId(itemId),
             owner: owner,
-            amount: amount,
+            amount: Number(amount),
             price: price,
             marketFee: marketFee,
             state: this.mapPositionState(state),
@@ -231,7 +231,7 @@ export class EventManager {
             || positionData.state === PositionState.Raffle 
             || positionData.state === PositionState.Loan
         ) {
-            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -amount);
+            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -Number(amount));
         } else if (positionData.state === PositionState.Available) {
             const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
                 (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
@@ -263,7 +263,7 @@ export class EventManager {
             seller: seller,
             buyer: buyer,
             price: BigInt(price) / amount,
-            amount: amount,
+            amount: Number(amount),
             timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };

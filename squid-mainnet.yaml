@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: sqwid-marketplace
-version: 2
+version: 3
 description: |-
   Sqwid marketplace processor
 
@@ -20,7 +20,7 @@ deploy:
       NFT_CONTRACT_ADDRESS:
         "0x0601202b75C96A61CDb9A99D4e2285E43c6e60e4"
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:

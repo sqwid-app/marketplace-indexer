@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: sqwid-marketplace-testnet
-version: 1
+version: 2
 description: |-
   Sqwid marketplace testnet processor
 
@@ -16,11 +16,11 @@ deploy:
       START_BLOCK:
         1
       MARKET_CONTRACT_ADDRESS:
-        "0xB4630116Dca95650C1E56F3dD39c7edeb1075B38"
+        "TODO"
       NFT_CONTRACT_ADDRESS:
-        "0xc2F3BE4636A0a1ddf3b4D63ef22014DD41114336"
+        "TODO"
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
