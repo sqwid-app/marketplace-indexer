@@ -26,7 +26,8 @@ const network = process.env.NETWORK;
 if (!network) throw new Error('Network not set in environment.')
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
-const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
+const USE_ONLY_RPC = process.env.USE_ONLY_RPC === 'true';
+const ARCHIVE = USE_ONLY_RPC ? undefined : lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '1') || 1;
 export const MARKET_CONTRACT_ADDRESS = process.env.MARKET_CONTRACT_ADDRESS as string;
 export const NFT_CONTRACT_ADDRESS = process.env.NFT_CONTRACT_ADDRESS as string;
@@ -37,9 +38,9 @@ console.log(`
   RPC URL: ${RPC_URL}
   Marketplace contract: ${MARKET_CONTRACT_ADDRESS}
   NFT contract: ${NFT_CONTRACT_ADDRESS}
-  Archive: ${ARCHIVE}
-  Start block: ${START_BLOCK}
+  Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
   Firebase: ${firebaseDB ? 'enabled' : 'disabled'}
+  Start block: ${START_BLOCK}
 `);
 
 const database = new TypeormDatabase();

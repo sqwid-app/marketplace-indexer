@@ -19,6 +19,10 @@ deploy:
         "TODO"
       NFT_CONTRACT_ADDRESS:
         "TODO"
+      NOTIFY_EVENTS_EMITTED:
+        true
+      USE_ONLY_RPC:
+        false
       PUSHER_ENABLED:
         false
       PUSHER_APP_ID:
