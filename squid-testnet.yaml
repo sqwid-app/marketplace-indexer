@@ -16,15 +16,15 @@ deploy:
       START_BLOCK:
         1
       MARKET_CONTRACT_ADDRESS:
-        "TODO"
+        "0x31939DF5c6A5ac0b574EDE6E610Fd30c08788A53"
       NFT_CONTRACT_ADDRESS:
-        "TODO"
+        "0x9FdEb478A27E216f80DaEE0967dc426338eD02f2"
       NOTIFY_EVENTS_EMITTED:
         true
       USE_ONLY_RPC:
-        false
+        true
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
