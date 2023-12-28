@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: sqwid-marketplace-testnet
-version: 1
+version: 2
 description: |-
   Sqwid marketplace testnet processor
 
@@ -13,16 +13,18 @@ deploy:
     env:
       NETWORK:
         testnet
-      NODE_RPC_WS:
-        wss://rpc-testnet.reefscan.info/ws
-      ARCHIVE_LOOKUP_NAME:
-        reef-testnet
       START_BLOCK:
         1
       MARKET_CONTRACT_ADDRESS:
-        "0xB4630116Dca95650C1E56F3dD39c7edeb1075B38"
+        "0x31939DF5c6A5ac0b574EDE6E610Fd30c08788A53"
       NFT_CONTRACT_ADDRESS:
-        "0xc2F3BE4636A0a1ddf3b4D63ef22014DD41114336"
+        "0x9FdEb478A27E216f80DaEE0967dc426338eD02f2"
+      NOTIFY_EVENTS_EMITTED:
+        true
+      FIREBASE_PROJECT_ID:
+        sqwid-dapp-testnet
+      USE_ONLY_RPC:
+        true
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -39,5 +41,15 @@ deploy:
   api:
     cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
+    - NODE_RPC_WS_MAINNET
+    - NODE_RPC_WS_TESTNET
+    - ARCHIVE_LOOKUP_NAME_MAINNET
+    - ARCHIVE_LOOKUP_NAME_TESTNET
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
     - PUSHER_SECRET
+    - FIREBASE_MARKETPLACE_CLIENT_EMAIL_TESTNET
+    - FIREBASE_MARKETPLACE_PK_TESTNET
+    - FIREBASE_MARKETPLACE_CLIENT_EMAIL_MAINNET
+    - FIREBASE_MARKETPLACE_PK_MAINNET
 
