@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: sqwid-marketplace
-version: 2
+version: 3
 description: |-
   Sqwid marketplace processor
 
@@ -13,18 +13,20 @@ deploy:
     env:
       NETWORK:
         mainnet
-      NODE_RPC_WS:
-        wss://rpc.reefscan.info/ws
-      ARCHIVE_LOOKUP_NAME:
-        reef
       START_BLOCK:
         1
       MARKET_CONTRACT_ADDRESS:
         "0xB13Be9656B243600C86922708C20606f5EA89218"
       NFT_CONTRACT_ADDRESS:
         "0x0601202b75C96A61CDb9A99D4e2285E43c6e60e4"
-      PUSHER_ENABLED:
+      NOTIFY_EVENTS_EMITTED:
         true
+      FIREBASE_PROJECT_ID:
+        sqwid-dapp
+      USE_ONLY_RPC:
+        false
+      PUSHER_ENABLED:
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -39,5 +41,15 @@ deploy:
   api:
     cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
+    - NODE_RPC_WS_MAINNET
+    - NODE_RPC_WS_TESTNET
+    - ARCHIVE_LOOKUP_NAME_MAINNET
+    - ARCHIVE_LOOKUP_NAME_TESTNET
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
     - PUSHER_SECRET
+    - FIREBASE_MARKETPLACE_CLIENT_EMAIL_TESTNET
+    - FIREBASE_MARKETPLACE_PK_TESTNET
+    - FIREBASE_MARKETPLACE_CLIENT_EMAIL_MAINNET
+    - FIREBASE_MARKETPLACE_PK_MAINNET
 
