@@ -23,8 +23,8 @@ export class Position {
     @Column_("text", {nullable: false})
     owner!: string
 
-    @Column_("int4", {nullable: false})
-    amount!: number
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    amount!: bigint
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     price!: bigint

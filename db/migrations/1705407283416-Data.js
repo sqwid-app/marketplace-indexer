@@ -1,5 +1,5 @@
-module.exports = class Data1689775856580 {
-    name = 'Data1689775856580'
+module.exports = class Data1705407283416 {
+    name = 'Data1705407283416'
 
     async up(db) {
         await db.query(`CREATE TABLE "bid" ("id" character varying NOT NULL, "bidder" text NOT NULL, "value" numeric NOT NULL, "timestamp" numeric NOT NULL, "block_height" integer NOT NULL, "position_id" character varying, CONSTRAINT "PK_ed405dda320051aca2dcb1a50bb" PRIMARY KEY ("id"))`)
@@ -14,10 +14,10 @@ module.exports = class Data1689775856580 {
         await db.query(`CREATE INDEX "IDX_beacf60143ff87c4dce2f212ed" ON "loan_funded" ("position_id") `)
         await db.query(`CREATE INDEX "IDX_322e006e67247237e7186489f1" ON "loan_funded" ("funder") `)
         await db.query(`CREATE INDEX "IDX_e7e4d63ff065a58920a3f9fb65" ON "loan_funded" ("block_height") `)
-        await db.query(`CREATE TABLE "position" ("id" character varying NOT NULL, "owner" text NOT NULL, "amount" integer NOT NULL, "price" numeric NOT NULL, "market_fee" numeric NOT NULL, "state" character varying(11), "updated_at" numeric NOT NULL, "item_id" character varying, CONSTRAINT "PK_b7f483581562b4dc62ae1a5b7e2" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "position" ("id" character varying NOT NULL, "owner" text NOT NULL, "amount" numeric NOT NULL, "price" numeric NOT NULL, "market_fee" numeric NOT NULL, "state" character varying(11), "updated_at" numeric NOT NULL, "item_id" character varying, CONSTRAINT "PK_b7f483581562b4dc62ae1a5b7e2" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_0d4c89e4a4fbd5d1fb02618638" ON "position" ("item_id") `)
         await db.query(`CREATE INDEX "IDX_23adf266f9075e2b4c68e650a3" ON "position" ("owner") `)
-        await db.query(`CREATE TABLE "sale" ("id" character varying NOT NULL, "seller" text NOT NULL, "buyer" text NOT NULL, "price" numeric NOT NULL, "amount" integer NOT NULL, "timestamp" numeric NOT NULL, "block_height" integer NOT NULL, "item_id" character varying, CONSTRAINT "PK_d03891c457cbcd22974732b5de2" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "sale" ("id" character varying NOT NULL, "seller" text NOT NULL, "buyer" text NOT NULL, "price" numeric NOT NULL, "amount" numeric NOT NULL, "timestamp" numeric NOT NULL, "block_height" integer NOT NULL, "item_id" character varying, CONSTRAINT "PK_d03891c457cbcd22974732b5de2" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_439a57a4a0d130329d3d2e671b" ON "sale" ("item_id") `)
         await db.query(`CREATE INDEX "IDX_3cd3366d2c0c6e1484ebb3520b" ON "sale" ("seller") `)
         await db.query(`CREATE INDEX "IDX_52a5d0b75a305496a326d4f2f6" ON "sale" ("buyer") `)

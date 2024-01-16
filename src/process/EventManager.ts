@@ -216,7 +216,7 @@ export class EventManager {
             id: this.formatId(positionId),
             itemId: this.formatId(itemId),
             owner: owner,
-            amount: Number(amount),
+            amount: BigInt(amount),
             price: price,
             marketFee: marketFee,
             state: this.mapPositionState(state),
@@ -231,7 +231,7 @@ export class EventManager {
             || positionData.state === PositionState.Raffle 
             || positionData.state === PositionState.Loan
         ) {
-            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -Number(amount));
+            this.addAvailableBalanceDelta(owner, this.formatId(itemId), -BigInt(amount));
         } else if (positionData.state === PositionState.Available) {
             const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
                 (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
@@ -262,8 +262,8 @@ export class EventManager {
             itemId: this.formatId(itemId),
             seller: seller,
             buyer: buyer,
-            price: BigInt(price) / amount,
-            amount: Number(amount),
+            price: BigInt(price) / BigInt(amount),
+            amount: BigInt(amount),
             timestamp: BigInt(blockHeader.timestamp!),
             blockHeight: blockHeader.height,
         };
@@ -343,9 +343,9 @@ export class EventManager {
             if (!item) return; // NFT is not in the marketplace
         }
 
-        this.addAvailableBalanceDelta(from, item.id, -Number(value));
+        this.addAvailableBalanceDelta(from, item.id, -BigInt(value));
         if (to !== ethers.ZeroAddress) {
-            this.addAvailableBalanceDelta(to, item.id, Number(value));
+            this.addAvailableBalanceDelta(to, item.id, BigInt(value));
         }
     }
 
@@ -367,14 +367,14 @@ export class EventManager {
                 if (!item) continue; // NFT is not in the marketplace
             }
     
-            this.addAvailableBalanceDelta(from, item.id, -Number(values[index]));
+            this.addAvailableBalanceDelta(from, item.id, -BigInt(values[index]));
             if (to !== ethers.ZeroAddress) {
-                this.addAvailableBalanceDelta(to, item.id, Number(values[index]));
+                this.addAvailableBalanceDelta(to, item.id, BigInt(values[index]));
             }
         }
     }
 
-    private addAvailableBalanceDelta(owner: string, itemId: string, amount: number): void {
+    private addAvailableBalanceDelta(owner: string, itemId: string, amount: bigint): void {
         const indexOfAvailableBalancesDelta = this.availableBalancesDelta.findIndex(
             (abd) => abd.owner === owner && abd.itemId === this.formatId(itemId)
         );

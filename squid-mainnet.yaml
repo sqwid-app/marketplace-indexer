@@ -20,7 +20,7 @@ deploy:
       NFT_CONTRACT_ADDRESS:
         "0x0601202b75C96A61CDb9A99D4e2285E43c6e60e4"
       NOTIFY_EVENTS_EMITTED:
-        true
+        false
       FIREBASE_PROJECT_ID:
         sqwid-dapp
       USE_ONLY_RPC:

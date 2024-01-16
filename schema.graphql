@@ -12,7 +12,7 @@ type Position @entity {
   id: ID!
   item: Item!
   owner: String! @index
-  amount: Int!
+  amount: BigInt!
   price: BigInt!
   marketFee: BigInt!
   state: PositionState
@@ -28,7 +28,7 @@ type Sale @entity {
   seller: String! @index
   buyer: String! @index
   price: BigInt!
-  amount: Int!
+  amount: BigInt!
   timestamp: BigInt!
   blockHeight: Int! @index
 }

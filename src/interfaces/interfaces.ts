@@ -4,7 +4,7 @@ export interface PositionData {
     id: string;
     itemId: string;
     owner: string;
-    amount: number;
+    amount: bigint;
     price: bigint;
     marketFee: bigint;
     state: PositionState;
@@ -22,7 +22,7 @@ export interface SaleData {
     seller: string;
     buyer: string;
     price: bigint;
-    amount: number;
+    amount: bigint;
     timestamp: bigint;
     blockHeight: number;
 }
@@ -56,5 +56,5 @@ export interface RaffleEntryData {
 export interface AvailableBalanceDelta {
     itemId: string;
     owner: string;
-    delta: number;
+    delta: bigint;
 }
