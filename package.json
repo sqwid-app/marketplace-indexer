@@ -10,9 +10,9 @@
     "lint": "eslint . --ext .ts --ignore-path .gitignore --ignore-pattern src/abi/**/*  --fix"
   },
   "dependencies": {
-    "@subsquid/archive-registry": "^3.3.0",
+    "@subsquid/archive-registry": "^3.3.2",
     "@subsquid/big-decimal": "^1.0.0",
-    "@subsquid/cli": "^2.6.1",
+    "@subsquid/cli": "^3.0.0",
     "@subsquid/graphql-server": "^4.3.1",
     "@subsquid/ss58": "^2.0.1",
     "@subsquid/substrate-processor": "^7.2.1",
